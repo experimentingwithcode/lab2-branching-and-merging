@@ -1,0 +1,697 @@
+From 9e682cac54957329bce165227719128722d85f4c Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 5 Oct 2026 04:57:27 +0000
+Subject: [PATCH 5/5] Finish the MultiSet lab: complete BST, Tree, and all
+ MultiSet classes
+
+- BST: implement extractMax, height, count, getSize; fix delete on an
+  empty tree (NPE) and the promote-left case in deleteRoot, which read
+  this.left after overwriting it
+- Tree: translate the Python Tree class (size, count, contains, insert,
+  deleteItem, leaves, average, toString, equals, insertChild)
+- ArrayListMultiSet, LinkedListMultiSet, BSTMultiSet, TreeMultiSet:
+  implement all MultiSet methods, delegating to the underlying structure
+
+All 58 provided tests pass and Main's timing experiment runs without
+failure messages.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mk2S9Fa2PaRukrqatU1oiY
+---
+ src/ArrayListMultiSet.java  |  19 ++-
+ src/BST.java                |  66 ++++++--
+ src/BSTMultiSet.java        |  10 +-
+ src/LinkedListMultiSet.java |  38 ++++-
+ src/Tree.java               | 298 +++++++++++++++++++++++++++++++++++-
+ src/TreeMultiSet.java       |  12 +-
+ 6 files changed, 405 insertions(+), 38 deletions(-)
+
+diff --git a/src/ArrayListMultiSet.java b/src/ArrayListMultiSet.java
+index bd932c2..21f128e 100644
+--- a/src/ArrayListMultiSet.java
++++ b/src/ArrayListMultiSet.java
+@@ -12,7 +12,7 @@ public class ArrayListMultiSet extends MultiSet {
+      */
+     @Override
+     void add(int item) {
+-
++        lst.add(item);
+     }
+ 
+     /**
+@@ -23,7 +23,8 @@ public class ArrayListMultiSet extends MultiSet {
+      */
+     @Override
+     void remove(int item) {
+-
++        // cast to Integer so we remove the value, not the element at index item
++        lst.remove(Integer.valueOf(item));
+     }
+ 
+     /**
+@@ -34,7 +35,7 @@ public class ArrayListMultiSet extends MultiSet {
+      */
+     @Override
+     boolean contains(int item) {
+-        return false;
++        return lst.contains(item);
+     }
+ 
+     /**
+@@ -42,7 +43,7 @@ public class ArrayListMultiSet extends MultiSet {
+      */
+     @Override
+     boolean isEmpty() {
+-        return false;
++        return lst.isEmpty();
+     }
+ 
+     /**
+@@ -53,7 +54,13 @@ public class ArrayListMultiSet extends MultiSet {
+      */
+     @Override
+     int count(int item) {
+-        return -1;
++        int num = 0;
++        for (int x : lst) {
++            if (x == item) {
++                num++;
++            }
++        }
++        return num;
+     }
+ 
+     /**
+@@ -61,6 +68,6 @@ public class ArrayListMultiSet extends MultiSet {
+      */
+     @Override
+     int size() {
+-        return -1;
++        return lst.size();
+     }
+ }
+diff --git a/src/BST.java b/src/BST.java
+index 7d259c9..12e83ae 100644
+--- a/src/BST.java
++++ b/src/BST.java
+@@ -29,8 +29,7 @@ public class BST {
+ 
+ 
+     public boolean isEmpty() {
+-        return root==null;
+-        // Correct one
++        return root == null;
+     }
+ 
+     public boolean contains(int item) {
+@@ -53,18 +52,15 @@ public class BST {
+      * @param item the item
+      */
+     public void insert(int item) {
+-
+         if (this.isEmpty()) {
+             this.root = item;
+             this.left = new BST();
+             this.right = new BST();
+-        } else if (item <= this.root ) {
++        } else if (item <= this.root) {
+             this.left.insert(item);
+         } else {
+             this.right.insert(item);
+         }
+-
+-
+     }
+ 
+ 
+@@ -75,7 +71,9 @@ public class BST {
+      * @param item the item
+      */
+     public void delete(int item) {
+-        if (this.root == item) {
++        if (this.isEmpty()) {
++            return;
++        } else if (this.root == item) {
+             this.deleteRoot();
+         } else if (item < this.root) {
+             this.left.delete(item);
+@@ -100,9 +98,11 @@ public class BST {
+             this.right = this.right.right;
+         } else if (this.right.isEmpty()) {
+             // "Promote" the left subtree.
+-            this.root = this.left.root;
+-            this.left = this.left.left;
+-            this.right = this.left.right;
++            // Save the old left subtree first, since we overwrite this.left below.
++            BST oldLeft = this.left;
++            this.root = oldLeft.root;
++            this.left = oldLeft.left;
++            this.right = oldLeft.right;
+         } else {
+             // Both subtrees are non-empty. Can choose to replace the root
+             // from either the max value of the left subtree, or the min value
+@@ -113,20 +113,58 @@ public class BST {
+     }
+ 
+ 
++    /**
++     * Remove and return the maximum item stored in this tree.
++     * Precondition: this tree is non-empty.
++     *
++     * @return the maximum item that was removed
++     */
+     private int extractMax() {
+-        return -1;
++        if (this.right.isEmpty()) {
++            int maxItem = this.root;
++            // "Promote" the left subtree.
++            BST oldLeft = this.left;
++            this.root = oldLeft.root;
++            this.left = oldLeft.left;
++            this.right = oldLeft.right;
++            return maxItem;
++        }
++        return this.right.extractMax();
+     }
+ 
++    /**
++     * @return the height of this BST
++     */
+     public int height() {
+-        return -1;
++        if (this.isEmpty()) {
++            return 0;
++        }
++        return Math.max(this.left.height(), this.right.height()) + 1;
+     }
+ 
++    /**
++     * @param item the item to count
++     * @return the number of occurrences of item in this BST
++     */
+     public int count(int item) {
+-        return -1;
++        if (this.isEmpty()) {
++            return 0;
++        } else if (this.root > item) {
++            return this.left.count(item);
++        } else if (this.root == item) {
++            return 1 + this.left.count(item) + this.right.count(item);
++        }
++        return this.right.count(item);
+     }
+ 
++    /**
++     * @return the number of items in this BST
++     */
+     public int getSize() {
+-        return -1;
++        if (this.isEmpty()) {
++            return 0;
++        }
++        return 1 + this.left.getSize() + this.right.getSize();
+     }
+ 
+     public static void main(String[] args) {
+diff --git a/src/BSTMultiSet.java b/src/BSTMultiSet.java
+index ef599cd..b71a632 100644
+--- a/src/BSTMultiSet.java
++++ b/src/BSTMultiSet.java
+@@ -11,6 +11,7 @@ public class BSTMultiSet extends MultiSet {
+      */
+     @Override
+     void add(int item) {
++        bst.insert(item);
+     }
+ 
+     /**
+@@ -21,6 +22,7 @@ public class BSTMultiSet extends MultiSet {
+      */
+     @Override
+     void remove(int item) {
++        bst.delete(item);
+     }
+ 
+     /**
+@@ -31,7 +33,7 @@ public class BSTMultiSet extends MultiSet {
+      */
+     @Override
+     boolean contains(int item) {
+-        return false;
++        return bst.contains(item);
+     }
+ 
+     /**
+@@ -39,7 +41,7 @@ public class BSTMultiSet extends MultiSet {
+      */
+     @Override
+     boolean isEmpty() {
+-        return false;
++        return bst.isEmpty();
+     }
+ 
+     /**
+@@ -50,7 +52,7 @@ public class BSTMultiSet extends MultiSet {
+      */
+     @Override
+     int count(int item) {
+-        return -1;
++        return bst.count(item);
+     }
+ 
+     /**
+@@ -58,6 +60,6 @@ public class BSTMultiSet extends MultiSet {
+      */
+     @Override
+     int size() {
+-        return -1;
++        return bst.getSize();
+     }
+ }
+diff --git a/src/LinkedListMultiSet.java b/src/LinkedListMultiSet.java
+index eb86216..1abf355 100644
+--- a/src/LinkedListMultiSet.java
++++ b/src/LinkedListMultiSet.java
+@@ -25,23 +25,53 @@ public class LinkedListMultiSet extends MultiSet {
+     }
+ 
+     public void remove(int item) {
+-
++        Node cur = front;
++        Node prev = null;
++        while (cur != null) {
++            if (cur.item == item) {
++                size -= 1;
++                if (prev != null) {
++                    prev.next = cur.next;
++                } else { // first item
++                    front = cur.next;
++                }
++                return;
++            }
++            prev = cur;
++            cur = cur.next;
++        }
++        // if here, item not found
+     }
+ 
+     public boolean contains(int item) {
++        Node cur = front;
++        while (cur != null) {
++            if (cur.item == item) {
++                return true;
++            }
++            cur = cur.next;
++        }
+         return false;
+     }
+ 
+     public boolean isEmpty() {
+-        return false;
++        return front == null;
+     }
+ 
+ 
+     public int count(int item) {
+-        return -1;
++        int numSeen = 0;
++        Node cur = front;
++        while (cur != null) {
++            if (cur.item == item) {
++                numSeen += 1;
++            }
++            cur = cur.next;
++        }
++        return numSeen;
+     }
+ 
+     public int size() {
+-        return -1;
++        return size;
+     }
+ }
+diff --git a/src/Tree.java b/src/Tree.java
+index 1506c0f..299f896 100644
+--- a/src/Tree.java
++++ b/src/Tree.java
+@@ -1,6 +1,296 @@
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Random;
++
++/**
++ * A recursive tree data structure, which provides services required of the
++ * MultiSet ADT. See TreeMultiSet, which uses this class.
++ * This is a simplified version of the Tree data structure adapted from CSC148.
++ * See the python version for additional documentation.
++ */
+ public class Tree {
+-    // We recommend attempting this class last, as it hasn't been scaffolded for your team.
+-    // Even if your team doesn't have time to implement this class, it is a useful exercise
+-    // to think about how you might split up the work to get the Tree and TreeMultiSet
+-    // implemented.
++    private static final Random RANDOM = new Random();
++
++    // The item stored at this tree's root, or null if the tree is empty.
++    // We use Integer here so that we can set the root to null, like the BST class does.
++    private Integer root;
++
++    // The list of all subtrees of this tree.
++    private final List<Tree> subtrees = new ArrayList<>();
++
++    // === Representation Invariants ===
++    // - If root is null then subtrees is an empty list. This represents an empty tree.
++    // - subtrees may be empty when root is not null. This represents a tree
++    //   consisting of just one node.
++
++    /**
++     * Create an empty tree.
++     */
++    public Tree() {
++        this.root = null;
++    }
++
++    /**
++     * Create a tree with the given root value and no subtrees.
++     *
++     * @param root the root value
++     */
++    public Tree(int root) {
++        this.root = root;
++    }
++
++    /**
++     * Create a tree with the given root value and subtrees.
++     *
++     * @param root     the root value
++     * @param subtrees the subtrees of this tree (the list is copied, not aliased)
++     */
++    public Tree(int root, List<Tree> subtrees) {
++        this.root = root;
++        this.subtrees.addAll(subtrees);
++    }
++
++    /**
++     * @return whether this tree is empty
++     */
++    public boolean isEmpty() {
++        return root == null;
++    }
++
++    /**
++     * @return the number of items contained in this tree
++     */
++    public int size() {
++        if (this.isEmpty()) {
++            return 0;
++        }
++        int size = 1; // count the root
++        for (Tree subtree : subtrees) {
++            size += subtree.size();
++        }
++        return size;
++    }
++
++    /**
++     * @param item the item to count
++     * @return the number of occurrences of item in this tree
++     */
++    public int count(int item) {
++        if (this.isEmpty()) {
++            return 0;
++        }
++        int num = 0;
++        if (root == item) {
++            num += 1;
++        }
++        for (Tree subtree : subtrees) {
++            num += subtree.count(item);
++        }
++        return num;
++    }
++
++    /**
++     * Return a string representation of this tree. For each node, its item is
++     * printed before any of its descendants' items, and the output is indented
++     * by depth. You may find this method helpful for debugging.
++     */
++    @Override
++    public String toString() {
++        return strIndented(0);
++    }
++
++    private String strIndented(int depth) {
++        if (this.isEmpty()) {
++            return "";
++        }
++        StringBuilder s = new StringBuilder("  ".repeat(depth) + root + "\n");
++        for (Tree subtree : subtrees) {
++            // Note that the depth argument to the recursive call is modified.
++            s.append(subtree.strIndented(depth + 1));
++        }
++        return s.toString();
++    }
++
++    /**
++     * @return the average of all the values in this tree, or 0.0 if this tree is empty
++     */
++    public double average() {
++        if (this.isEmpty()) {
++            return 0.0;
++        }
++        // Java has no tuples, so the helper returns {total, size} as an array.
++        int[] totalAndSize = averageHelper();
++        return (double) totalAndSize[0] / totalAndSize[1];
++    }
++
++    private int[] averageHelper() {
++        if (this.isEmpty()) {
++            return new int[] {0, 0};
++        }
++        int total = root;
++        int size = 1;
++        for (Tree subtree : subtrees) {
++            int[] sub = subtree.averageHelper();
++            total += sub[0];
++            size += sub[1];
++        }
++        return new int[] {total, size};
++    }
++
++    @Override
++    public boolean equals(Object obj) {
++        if (!(obj instanceof Tree)) {
++            return false;
++        }
++        Tree other = (Tree) obj;
++        if (this.isEmpty() && other.isEmpty()) {
++            return true;
++        } else if (this.isEmpty() || other.isEmpty()) {
++            return false;
++        }
++        return root.equals(other.root) && subtrees.equals(other.subtrees);
++    }
++
++    @Override
++    public int hashCode() {
++        return isEmpty() ? 0 : 31 * root + subtrees.hashCode();
++    }
++
++    /**
++     * @param item the item to look for
++     * @return whether item is in this tree
++     */
++    public boolean contains(int item) {
++        if (this.isEmpty()) {
++            return false;
++        }
++        // item may be in root, or subtrees
++        if (root == item) {
++            return true;
++        }
++        for (Tree subtree : subtrees) {
++            if (subtree.contains(item)) {
++                return true;
++            }
++        }
++        return false;
++    }
++
++    /**
++     * @return a list of all the leaf items in this tree
++     */
++    public List<Integer> leaves() {
++        List<Integer> leaves = new ArrayList<>();
++        if (this.isEmpty()) {
++            return leaves;
++        } else if (subtrees.isEmpty()) {
++            leaves.add(root);
++            return leaves;
++        }
++        for (Tree subtree : subtrees) {
++            leaves.addAll(subtree.leaves());
++        }
++        return leaves;
++    }
++
++    // -------------------------------------------------------------------------
++    // Mutating methods
++    // -------------------------------------------------------------------------
++
++    /**
++     * Delete *one* occurrence of the given item from this tree.
++     * Do not modify this tree if it does not contain item.
++     *
++     * @param item the item to delete
++     * @return true if item was deleted, and false otherwise
++     */
++    public boolean deleteItem(int item) {
++        if (this.isEmpty()) {
++            // The item is not in the tree.
++            return false;
++        } else if (root == item) {
++            // We've found the item: now delete it.
++            this.deleteRoot();
++            return true;
++        }
++        // Loop through each subtree, and stop the first time the item is deleted.
++        for (int i = 0; i < subtrees.size(); i++) {
++            Tree subtree = subtrees.get(i);
++            if (subtree.deleteItem(item)) {
++                if (subtree.isEmpty()) {
++                    // The subtree is now empty, so remove it from the list of subtrees.
++                    // This is only safe because we return immediately afterwards.
++                    subtrees.remove(i);
++                }
++                return true;
++            }
++        }
++        // The item does not appear in this tree.
++        return false;
++    }
++
++    /**
++     * Remove the root item of this tree.
++     * Precondition: this tree is non-empty.
++     */
++    private void deleteRoot() {
++        if (subtrees.isEmpty()) {
++            // This is a leaf. Deleting the root gives an empty tree.
++            root = null;
++        } else {
++            // Replace the root with the root of the last subtree.
++            Tree chosenSubtree = subtrees.remove(subtrees.size() - 1);
++            root = chosenSubtree.root;
++            subtrees.addAll(chosenSubtree.subtrees);
++        }
++    }
++
++    /**
++     * Insert item into this tree using the following algorithm.
++     * 1. If the tree is empty, item is the new root of the tree.
++     * 2. If the tree has a root but no subtrees, create a new tree containing
++     *    the item, and make this new tree a subtree of the original tree.
++     * 3. Otherwise, pick a random number between 1 and 3 inclusive.
++     *    - If the random number is 3, create a new tree containing the item,
++     *      and make this new tree a subtree of the original.
++     *    - If the random number is a 1 or 2, pick one of the existing subtrees
++     *      at random, and recursively insert the new item into that subtree.
++     *
++     * @param item the item to insert
++     */
++    public void insert(int item) {
++        if (this.isEmpty()) {
++            root = item;
++        } else if (subtrees.isEmpty()) {
++            subtrees.add(new Tree(item));
++        } else if (RANDOM.nextInt(3) + 1 == 3) {
++            subtrees.add(new Tree(item));
++        } else {
++            int subtreeIndex = RANDOM.nextInt(subtrees.size());
++            subtrees.get(subtreeIndex).insert(item);
++        }
++    }
++
++    /**
++     * Insert item into this tree as a child of parent.
++     * If parent appears more than once in this tree, item is only inserted once.
++     *
++     * @param item   the item to insert
++     * @param parent the item to insert under
++     * @return true if successful, or false if parent is not in this tree
++     */
++    public boolean insertChild(int item, int parent) {
++        if (this.isEmpty()) {
++            return false;
++        } else if (root == parent) {
++            subtrees.add(new Tree(item));
++            return true;
++        }
++        for (Tree subtree : subtrees) {
++            if (subtree.insertChild(item, parent)) {
++                return true;
++            }
++        }
++        return false;
++    }
+ }
+diff --git a/src/TreeMultiSet.java b/src/TreeMultiSet.java
+index 29a5ca7..fc3c27d 100644
+--- a/src/TreeMultiSet.java
++++ b/src/TreeMultiSet.java
+@@ -10,7 +10,7 @@ public class TreeMultiSet extends MultiSet {
+      */
+     @Override
+     void add(int item) {
+-
++        root.insert(item);
+     }
+ 
+     /**
+@@ -21,7 +21,7 @@ public class TreeMultiSet extends MultiSet {
+      */
+     @Override
+     void remove(int item) {
+-
++        root.deleteItem(item);
+     }
+ 
+     /**
+@@ -32,7 +32,7 @@ public class TreeMultiSet extends MultiSet {
+      */
+     @Override
+     boolean contains(int item) {
+-        return false;
++        return root.contains(item);
+     }
+ 
+     /**
+@@ -40,7 +40,7 @@ public class TreeMultiSet extends MultiSet {
+      */
+     @Override
+     boolean isEmpty() {
+-        return false;
++        return root.isEmpty();
+     }
+ 
+     /**
+@@ -51,7 +51,7 @@ public class TreeMultiSet extends MultiSet {
+      */
+     @Override
+     int count(int item) {
+-        return -1;
++        return root.count(item);
+     }
+ 
+     /**
+@@ -59,6 +59,6 @@ public class TreeMultiSet extends MultiSet {
+      */
+     @Override
+     int size() {
+-        return -1;
++        return root.size();
+     }
+ }
+-- 
+2.43.0
+

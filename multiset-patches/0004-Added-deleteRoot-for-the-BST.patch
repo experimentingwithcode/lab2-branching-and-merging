@@ -1,0 +1,50 @@
+From 5b3b563a3fdb8f5203bbe05b234a0285e30e7ba1 Mon Sep 17 00:00:00 2001
+From: Joshua Morton <morton.l.joshua@gmail.com>
+Date: Mon, 21 Sep 2026 15:56:36 -0400
+Subject: [PATCH 4/5] Added deleteRoot for the BST
+
+---
+ src/BST.java | 26 +++++++++++++++++++++++++-
+ 1 file changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/src/BST.java b/src/BST.java
+index e69aa23..7d259c9 100644
+--- a/src/BST.java
++++ b/src/BST.java
+@@ -84,8 +84,32 @@ public class BST {
+         }
+     }
+ 
+-    private void deleteRoot() {
+ 
++    /**
++     * Remove the root of this tree, assuming the tree is non-empty
++     */
++    private void deleteRoot() {
++        if (this.left.isEmpty() && this.right.isEmpty()) {
++            this.root = null;
++            this.left = null;
++            this.right = null;
++        } else if (this.left.isEmpty()) {
++            // "Promote" the right subtree.
++            this.root = this.right.root;
++            this.left = this.right.left;
++            this.right = this.right.right;
++        } else if (this.right.isEmpty()) {
++            // "Promote" the left subtree.
++            this.root = this.left.root;
++            this.left = this.left.left;
++            this.right = this.left.right;
++        } else {
++            // Both subtrees are non-empty. Can choose to replace the root
++            // from either the max value of the left subtree, or the min value
++            // of the right subtree.
++            // (Implementations are very similar, but we'll take the max from the left here.)
++            this.root = this.left.extractMax();
++        }
+     }
+ 
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,28 @@
+From 1102daaf0c8e29c782bfb6adebc7b1edfcb19e40 Mon Sep 17 00:00:00 2001
+From: Joshua Morton <morton.l.joshua@gmail.com>
+Date: Mon, 21 Sep 2026 15:40:24 -0400
+Subject: [PATCH 2/5] Added doc comments for BST insert
+
+---
+ src/BST.java | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/BST.java b/src/BST.java
+index 8df97bd..4a60bc5 100644
+--- a/src/BST.java
++++ b/src/BST.java
+@@ -47,6 +47,11 @@ public class BST {
+     }
+ 
+ 
++    /**
++     * Insert item into the tree.
++     *
++     * @param item the item
++     */
+     public void insert(int item) {
+ 
+         if (this.isEmpty()) {
+-- 
+2.43.0
+

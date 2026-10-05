@@ -1,0 +1,34 @@
+From e797bd38065a4bf0cb6e85a728c0f8d243e291af Mon Sep 17 00:00:00 2001
+From: Joshua Morton <morton.l.joshua@gmail.com>
+Date: Mon, 21 Sep 2026 15:34:40 -0400
+Subject: [PATCH 1/5] insert impl
+
+---
+ src/BST.java | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/src/BST.java b/src/BST.java
+index 98d0d6e..8df97bd 100644
+--- a/src/BST.java
++++ b/src/BST.java
+@@ -49,6 +49,17 @@ public class BST {
+ 
+     public void insert(int item) {
+ 
++        if (this.isEmpty()) {
++            this.root = item;
++            this.left = new BST();
++            this.right = new BST();
++        } else if (item <= this.root ) {
++            this.left.insert(item);
++        } else {
++            this.right.insert(item);
++        }
++
++
+     }
+ 
+ 
+-- 
+2.43.0
+
